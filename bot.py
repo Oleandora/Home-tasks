@@ -20,13 +20,9 @@ def main():
 
 def talk_to_me(bot, update):
     user_text = update.message.text 
-    #print(user_text)
     update.message.reply_text(user_text)
     
-def greet_user(bot, update):
-    #print('Вызван /start')
-   # print(update)
-    #print(text)
+def greet_user(bot, update):    
     update.message.reply_text('Hello!')
 
 def planet_answer(bot,update):
