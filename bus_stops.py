@@ -1,62 +1,67 @@
 from math import cos, acos, sin, degrees, radians
-import decimal, csv
+import decimal
+import csv
 
 
-RADIUS = int(6371221)
-R = 500
-DELTA = degrees(R / RADIUS)
 decimal.getcontext().prec = 1
-file_ms = 'data-397-2018-03-06.txt'
-file_bs = 'data-398-2018-03-06.txt'
+file_with_metro_stations = 'data-397-2018-03-06.txt'
+file_with_bus_stations = 'data-398-2018-03-06.txt'
 
 
 def read_csv(file):
-    with open(file, newline='',) as csvfile:
-        reader = csv.DictReader(csvfile, dialect='excel-tab')
+    with open(file, newline='',) as csv_file:
+        reader = csv.DictReader(csv_file, dialect='excel-tab')
         for row in reader:
             yield dict(name=row['Наименование'],lon=float(row['Долгота в WGS-84']), lat=float(row['Широта в WGS-84']))
 
 
-def distance(ms, bs):
-
-    def to_rad(point):
-        return radians(point['lat']), radians(point['lon'])
-
-    ms_lat, ms_lon = to_rad(ms)
-    bs_lat, bs_lon = to_rad(bs)
-
-    l = RADIUS * acos(sin(ms_lat)*sin(bs_lat) + cos(ms_lat)*cos(bs_lat) * cos(ms_lon - bs_lon))
-    return True if l <= R else False
+def to_radians(point):
+    return radians(point['lat']), radians(point['lon'])
 
 
-def bus_stations_filter(ms):
+def distance(metro_station, bus_station):
+    radius = int(6371221)
+    needed_radius = 500
 
-    global DELTA, RADIUS
+    metro_station_latitude, metro_station_longitude = to_radians(metro_station)
+    bus_station_latitude, bus_station_longitude = to_radians(bus_station)
 
-    lon_min, lon_max = ms['lon'] - DELTA, ms['lon'] + DELTA
-    lat_min, lat_max = ms['lat'] - DELTA, ms['lat'] + DELTA
-
-    ms['bus'] = 0
-
-    for item in read_csv(file_bs):
-        if lat_min < item['lat'] < lat_max and lon_min < item['lon'] < lon_max:
-            if True:
-                ms['bus'] += 1
-
-
-def iter_ms(ms):
-    for item in ms:
-        yield item['bus']
+    length = radius * acos(sin(metro_station_latitude)*sin(bus_station_latitude) +
+                           cos(metro_station_latitude)*cos(bus_station_latitude) *
+                           cos(metro_station_longitude - bus_station_longitude)
+                           )
+    return length <= needed_radius
 
 
-def find_stations(ms):
-    max_stops = max(iter_ms(ms))
-    max_stations = [x for x in ms if x['bus'] == max_stops]
+def bus_stations_filter(metro_station):
+    radius = int(6371221)
+    needed_radius = 500
+    delta = degrees(needed_radius / radius)
+
+    longitude_min, longitude_max = metro_station['lon'] - delta, metro_station['lon'] + delta
+    latitude_min, latitude_max = metro_station['lat'] - delta, metro_station['lat'] + delta
+
+    metro_station['bus'] = 0
+
+    for bus_stop in read_csv(file_with_bus_stations):
+        if latitude_min < bus_stop['lat'] < latitude_max and longitude_min < bus_stop['lon'] < longitude_max:
+            if distance(metro_station, bus_stop):
+                metro_station['bus'] += 1
+
+
+def iter_stations(metro_stations):
+    for station in metro_stations:
+        yield station['bus']
+
+
+def find_stations(metro_stations):
+    max_stops = max(iter_stations(metro_stations))
+    max_stations = [x for x in metro_stations if x['bus'] == max_stops]
     return max_stations
 
 
 if __name__ == '__main__':
-    metro_stations = [x for x in read_csv(file_ms)]
+    metro_stations = [x for x in read_csv(file_with_metro_stations)]
 
     for item in metro_stations:
         bus_stations_filter(item)
